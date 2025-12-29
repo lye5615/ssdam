@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # UI & Icons
   cupertino_icons: ^1.0.8
@@ -77,6 +79,7 @@ dependencies:
   
   # Environment variables
   flutter_dotenv: ^5.1.0
+  share_plus: ^12.0.1
 
 dev_dependencies:
   flutter_test:

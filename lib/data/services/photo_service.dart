@@ -16,7 +16,7 @@ import 'interfaces/i_photo_service.dart';
 
 class FirebasePhotoService implements IPhotoService {
   // Use FirebaseFirestoreService (will be renamed shortly)
-  final FirestoreService _firestoreService = FirestoreService();
+  final FirebaseFirestoreService _firestoreService = FirebaseFirestoreService();
   final GeminiService _geminiService = GeminiService();
 
   @override
@@ -199,7 +199,7 @@ class FirebasePhotoService implements IPhotoService {
   }
 
   @override
-  Future<List<PhotoModel>> processNewScreenshots(String userId, {bool forceReprocess = false}) async {
+  Future<List<PhotoModel>> processNewScreenshots(String userId, {bool forceReprocess = false, List<String>? customCategories}) async {
     final screenshots = await getLatestScreenshots();
     final processedPhotos = <PhotoModel>[];
 
@@ -218,6 +218,9 @@ class FirebasePhotoService implements IPhotoService {
     print('📊 기존 AssetEntity ID 수: ${existingAssetIds.length}');
     print('📊 현재 스크린샷 수: ${screenshots.length}');
     print('🔄 강제 재처리 모드: $forceReprocess');
+    if (customCategories != null) {
+      print('🏷️ 사용자 정의 카테고리 ${customCategories.length}개 사용');
+    }
 
     for (final screenshot in screenshots) {
       try {
@@ -238,7 +241,7 @@ class FirebasePhotoService implements IPhotoService {
 
         print('🔄 새 스크린샷 처리 시작: ${screenshot.id}');
 
-        final ocrResult = await _geminiService.processImage(file);
+        final ocrResult = await _geminiService.processImage(file, customCategories: customCategories);
         
         Map<String, dynamic>? productSearch;
         if (ocrResult.category == '제품' || ocrResult.category == '옷') {

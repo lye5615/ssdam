@@ -177,11 +177,14 @@ class AlbumProvider extends ChangeNotifier {
       
       final album = _albums[albumIndex];
       
+      /*
+      // User requested to allow renaming even for default categories
       // 기본 앨범 이름 변경 제한
       if (album.isDefault && AppConstants.defaultCategories.contains(album.name)) {
         _errorMessage = '기본 카테고리 앨범의 이름은 변경할 수 없습니다.';
         return false;
       }
+      */
       
       final updatedAlbum = album.copyWith(
         name: newName,

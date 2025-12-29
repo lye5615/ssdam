@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kimchi_jjim/data/services/photo_service.dart';
-import 'package:kimchi_jjim/data/services/gemini_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../data/services/gemini_service.dart';
+import '../../../core/di/service_locator.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/photo_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
+import 'category_management_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -16,8 +18,8 @@ class SettingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('설정'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textOnPrimary,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
       ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -32,10 +34,14 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundImage: authProvider.currentUser?.photoUrl != null
+                        backgroundImage: (authProvider.currentUser?.photoUrl != null && 
+                                        authProvider.currentUser!.photoUrl!.isNotEmpty &&
+                                        authProvider.currentUser!.photoUrl!.startsWith('http'))
                             ? NetworkImage(authProvider.currentUser!.photoUrl!)
                             : null,
-                        child: authProvider.currentUser?.photoUrl == null
+                        child: (authProvider.currentUser?.photoUrl == null || 
+                                authProvider.currentUser!.photoUrl!.isEmpty ||
+                                !authProvider.currentUser!.photoUrl!.startsWith('http'))
                             ? const Icon(Icons.person, size: 30)
                             : null,
                       ),
@@ -54,8 +60,8 @@ class SettingsScreen extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               authProvider.currentUser?.email ?? '',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                               ),
                             ),
                           ],
@@ -69,12 +75,12 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 24),
               
               // 앱 설정
-              const Text(
+              Text(
                 '앱 설정',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -82,6 +88,20 @@ class SettingsScreen extends StatelessWidget {
               Card(
                 child: Column(
                   children: [
+                    ListTile(
+                      leading: const Icon(Icons.brightness_6),
+                      title: const Text('테마 설정'),
+                      subtitle: Text(
+                        Provider.of<ThemeProvider>(context).isDarkMode ? '다크 모드' : '라이트 모드'
+                      ),
+                      trailing: Switch(
+                        value: Provider.of<ThemeProvider>(context).isDarkMode,
+                        onChanged: (value) {
+                          Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+                        },
+                      ),
+                    ),
+                    const Divider(height: 1),
                     ListTile(
                       leading: const Icon(Icons.photo_library),
                       title: const Text('갤러리 권한'),
@@ -108,65 +128,11 @@ class SettingsScreen extends StatelessWidget {
                       subtitle: const Text('분류 카테고리 수정'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
-                        // TODO: Open category management
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const CategoryManagementScreen()),
+                        );
                       },
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // 데이터 관리
-              const Text(
-                '데이터 관리',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              
-              Card(
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.sync),
-                      title: const Text('데이터 동기화'),
-                      subtitle: const Text('클라우드와 동기화'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        // TODO: Sync data
-                      },
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.backup),
-                      title: const Text('백업 및 복원'),
-                      subtitle: const Text('데이터 백업 설정'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        // TODO: Open backup settings
-                      },
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.storage),
-                      title: const Text('저장공간 정리'),
-                      subtitle: const Text('캐시 및 임시 파일 삭제'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        // TODO: Clean storage
-                      },
-                    ),
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.folder),
-                      title: const Text('폴더 위치'),
-                      subtitle: const Text('분류된 사진이 저장되는 위치'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showFolderLocationDialog(context),
                     ),
                   ],
                 ),
@@ -175,12 +141,12 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 24),
               
               // 정보
-              const Text(
+              Text(
                 '정보',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -222,12 +188,12 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // 개발자 도구 (디버그)
-              const Text(
+              Text(
                 '개발자 도구',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -257,12 +223,12 @@ class SettingsScreen extends StatelessWidget {
               const SizedBox(height: 24),
               
               // 계정 관리
-              const Text(
+              Text(
                 '계정 관리',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 8),
@@ -271,7 +237,7 @@ class SettingsScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     ListTile(
-                      leading: const Icon(Icons.logout, color: AppColors.textSecondary),
+                      leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                       title: const Text('로그아웃'),
                       onTap: () => _showLogoutDialog(context, authProvider),
                     ),
@@ -361,9 +327,9 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.folder, color: AppColors.primary),
+            Icon(Icons.folder, color: Theme.of(context).colorScheme.primary),
             SizedBox(width: 8),
             Text('폴더 위치'),
           ],
@@ -391,7 +357,7 @@ class SettingsScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -430,7 +396,7 @@ class SettingsScreen extends StatelessWidget {
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(const SnackBar(content: Text('제품 검색 테스트 시작...')));
 
-      final photoService = PhotoService();
+      final photoService = ServiceLocator.photoService;
       final screenshots = await photoService.getLatestScreenshots(count: 1);
       if (screenshots.isEmpty) {
         messenger.showSnackBar(const SnackBar(content: Text('최근 스크린샷을 찾지 못했습니다.')));
@@ -459,7 +425,7 @@ class SettingsScreen extends StatelessWidget {
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(const SnackBar(content: Text('기한 인식 테스트 시작...')));
 
-      final photoService = PhotoService();
+      final photoService = ServiceLocator.photoService;
       final screenshots = await photoService.getLatestScreenshots(count: 1);
       if (screenshots.isEmpty) {
         messenger.showSnackBar(const SnackBar(content: Text('최근 스크린샷을 찾지 못했습니다.')));

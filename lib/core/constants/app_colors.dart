@@ -1,48 +1,47 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFF6B73FF);
-  static const Color primaryLight = Color(0xFF9C9EFF);
-  static const Color primaryDark = Color(0xFF3F51B5);
+  // Main Colors (Black & White Theme)
+  static const Color primary = Color(0xFF000000); // Black
+  static const Color secondary = Color(0xFFFFFFFF); // White
+  static const Color tertiary = Color(0xFF808080); // Grey
   
   // Secondary Colors
-  static const Color secondary = Color(0xFFFF6B6B);
-  static const Color secondaryLight = Color(0xFFFF9C9C);
-  static const Color secondaryDark = Color(0xFFE53E3E);
+  static const Color secondaryLight = Color(0xFFE0E0E0); // Lighter Grey
+  static const Color secondaryDark = Color(0xFF616161); // Darker Grey
   
   // Background Colors
-  static const Color background = Color(0xFFF8F9FA);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFF1F3F4);
+  static const Color background = Color(0xFF000000); // Black
+  static const Color surface = Color(0xFF121212); // Dark Grey (Material Surface)
+  static const Color surfaceVariant = Color(0xFF2C2C2C); // Slightly lighter grey
   
   // Text Colors
-  static const Color textPrimary = Color(0xFF1A1A1A);
-  static const Color textSecondary = Color(0xFF666666);
-  static const Color textTertiary = Color(0xFF999999);
-  static const Color textOnPrimary = Color(0xFFFFFFFF);
+  static const Color textPrimary = Color(0xFFFFFFFF); // White
+  static const Color textSecondary = Color(0xFFAAAAAA); // Light Grey
+  static const Color textTertiary = Color(0xFF666666); // Darker Grey
+  static const Color textOnPrimary = Color(0xFFFFFFFF); // White
   
-  // Status Colors
-  static const Color success = Color(0xFF00C851);
-  static const Color warning = Color(0xFFFFBB33);
-  static const Color error = Color(0xFFFF4444);
-  static const Color info = Color(0xFF33B5E5);
+  // Functional Colors
+  static const Color error = Color(0xFFCF6679); // Material Dark Error
+  static const Color success = Color(0xFF03DAC6); // Material Dark Secondary
+  static const Color warning = Color(0xFFFFB74D); // Orange for warning
+  static const Color info = Color(0xFF64B5F6); // Blue for info
   
-  // Category Colors
+  // Category Colors - Monochrome
   static const List<Color> categoryColors = [
-    Color(0xFF6B73FF), // 정보/참고용
-    Color(0xFF00C851), // 대화/메시지
-    Color(0xFFFFBB33), // 학습/업무 메모
-    Color(0xFFFF6B6B), // 재미/밈/감정
-    Color(0xFF33B5E5), // 일정/예약
-    Color(0xFF9C27B0), // 증빙/거래
-    Color(0xFFFF9800), // 옷
-    Color(0xFF795548), // 제품
+    Color(0xFFFFFFFF), 
+    Color(0xFFEEEEEE),
+    Color(0xFFDDDDDD),
+    Color(0xFFCCCCCC),
+    Color(0xFFBBBBBB),
+    Color(0xFFAAAAAA),
+    Color(0xFF999999),
+    Color(0xFF888888),
   ];
   
   // Gradient Colors
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primary, primaryLight],
+    colors: [primary, surfaceVariant], // Black to Dark Grey
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -54,12 +53,12 @@ class AppColors {
   );
   
   // Shadow Colors
-  static const Color shadowLight = Color(0x1A000000);
+  static const Color shadowLight = Color(0x1AFFFFFF); // White shadow for dark mode visibility
   static const Color shadowMedium = Color(0x33000000);
   static const Color shadowDark = Color(0x4D000000);
   
   // Border Colors
-  static const Color border = Color(0xFFE0E0E0);
-  static const Color borderLight = Color(0xFFF0F0F0);
-  static const Color borderDark = Color(0xFFBDBDBD);
+  static const Color border = Color(0xFF424242);
+  static const Color borderLight = Color(0xFF616161);
+  static const Color borderDark = Color(0xFF212121);
 }

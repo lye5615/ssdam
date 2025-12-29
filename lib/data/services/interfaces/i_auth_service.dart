@@ -1,4 +1,4 @@
-import '../models/user_model.dart';
+import '../../models/user_model.dart';
 
 abstract class IAuthService {
   // 현재 로그인된 사용자

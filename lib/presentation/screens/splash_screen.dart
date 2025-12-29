@@ -131,10 +131,11 @@ class _SplashScreenState extends State<SplashScreen>
                           ],
                         ),
                         child: const Center(
-                          child: Text(
-                            '🥬',
-                            style: TextStyle(fontSize: 60),
-                          ),
+                            child: Icon(
+                              Icons.photo_library_rounded,
+                              size: 60,
+                              color: AppColors.primary,
+                            ),
                         ),
                       ),
                     ),

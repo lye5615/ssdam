@@ -75,7 +75,7 @@ class MockAuthService implements IAuthService {
       uid: 'mock_user_123',
       email: 'mock@example.com',
       displayName: 'Mock User',
-      photoUrl: 'https://via.placeholder.com/150',
+      photoUrl: '', // Removed network dependency
       createdAt: DateTime.now(),
       lastLoginAt: DateTime.now(),
     );

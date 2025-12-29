@@ -17,7 +17,12 @@ class PhotoGrid extends StatelessWidget {
     required this.photos,
     this.onPhotoTap,
     this.onPhotoLongPress,
+    this.isSelectionMode = false,
+    this.selectedPhotoIds = const {},
   });
+
+  final bool isSelectionMode;
+  final Set<String> selectedPhotoIds;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +65,8 @@ class PhotoGrid extends StatelessWidget {
           photo: photo,
           onTap: () => onPhotoTap?.call(photo),
           onLongPress: () => onPhotoLongPress?.call(photo),
+          isSelected: selectedPhotoIds.contains(photo.id),
+          isSelectionMode: isSelectionMode,
         );
       },
     );
@@ -75,7 +82,12 @@ class _PhotoTile extends StatelessWidget {
     required this.photo,
     this.onTap,
     this.onLongPress,
+    this.isSelected = false,
+    this.isSelectionMode = false,
   });
+
+  final bool isSelected;
+  final bool isSelectionMode;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +103,51 @@ class _PhotoTile extends StatelessWidget {
             child: _buildImage(),
           ),
           
+          // Selection Overlay
+          if (isSelectionMode)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? AppColors.primary : Colors.black38,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.check,
+                    size: 16,
+                    color: isSelected ? Colors.white : Colors.transparent,
+                  ),
+                ),
+              ),
+            ),
+          
+          // Selection Overlay
+          if (isSelectionMode)
+            Positioned(
+              top: 8,
+              left: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? AppColors.primary : Colors.black38,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.check,
+                    size: 16,
+                    color: isSelected ? Colors.white : Colors.transparent,
+                  ),
+                ),
+              ),
+            ),
+          
+          if (!isSelectionMode)
           // 즐겨찾기 아이콘
           Positioned(
             top: 8,
@@ -109,44 +166,7 @@ class _PhotoTile extends StatelessWidget {
             ),
           ),
           
-          // 카테고리 배지
-          Positioned(
-            bottom: 8,
-            left: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _getCategoryIcon(photo.category),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          
-          // OCR 텍스트가 있는 경우 표시
-          if (photo.ocrText?.isNotEmpty == true)
-            Positioned(
-              bottom: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.text_fields,
-                  size: 12,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+          // 카테고리 배지 및 OCR 아이콘 제거됨 (사용자 요청)
         ],
       ),
     );
@@ -191,13 +211,13 @@ class _PhotoTile extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary.withOpacity(0.1),
-            AppColors.secondary.withOpacity(0.1),
+            Colors.black12,
+            Colors.black26,
           ],
         ),
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.2),
+          color: Colors.white10,
           width: 1,
         ),
       ),
@@ -208,7 +228,7 @@ class _PhotoTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: Colors.white10,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -254,7 +274,7 @@ class _PhotoTile extends StatelessWidget {
   Widget _placeholder() {
     return Container(
       decoration: BoxDecoration(
-        gradient: AppColors.backgroundGradient,
+        color: AppColors.surfaceVariant,
       ),
       child: const Center(
         child: Icon(

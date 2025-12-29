@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,6 +9,7 @@ import 'core/di/service_locator.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/photo_provider.dart';
 import 'presentation/providers/album_provider.dart';
+import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'firebase_options.dart';
 
@@ -67,48 +69,143 @@ class KimchiJjimApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PhotoProvider()),
         ChangeNotifierProvider(create: (_) => AlbumProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: MaterialApp(
-        title: AppConstants.appName,
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          primaryColor: AppColors.primary,
-          scaffoldBackgroundColor: AppColors.background,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('ko', 'KR'),
+            ],
+            themeMode: themeProvider.themeMode,
+            theme: ThemeData(
+          brightness: Brightness.light,
+          primaryColor: Colors.white,
+          scaffoldBackgroundColor: Colors.white,
           appBarTheme: const AppBarTheme(
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.textOnPrimary,
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black, // App Name visible
             elevation: 0,
+            iconTheme: IconThemeData(color: Colors.black),
           ),
+          iconTheme: const IconThemeData(color: Colors.black),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.textOnPrimary,
+              backgroundColor: Colors.black, 
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
               ),
             ),
           ),
           cardTheme: CardTheme(
-            elevation: 2,
+            color: const Color(0xFFF5F5F5), // Light Grey Surface
+            elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
+              side: const BorderSide(color: Color(0xFFE0E0E0), width: 1),
+            ),
+          ),
+          snackBarTheme: SnackBarThemeData(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.black.withOpacity(0.8),
+            contentTextStyle: const TextStyle(color: Colors.white),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          useMaterial3: true,
+          colorScheme: const ColorScheme.light(
+            primary: Colors.black, // Primary Action Color
+            onPrimary: Colors.white,
+            secondary: Color(0xFFF5F5F5),
+            onSecondary: Colors.black,
+            surface: Color(0xFFF5F5F5),
+            onSurface: Colors.black,
+            background: Colors.white,
+            onBackground: Colors.black,
+          ),
+        ),
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          primaryColor: AppColors.primary,
+          scaffoldBackgroundColor: AppColors.background,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.textOnPrimary,
+            elevation: 0,
+            iconTheme: IconThemeData(color: Colors.white),
+          ),
+          iconTheme: const IconThemeData(
+            color: Colors.white,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white, // High contrast button
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+              ),
+            ),
+          ),
+          cardTheme: CardTheme(
+            color: AppColors.surface,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
+              side: const BorderSide(color: AppColors.surfaceVariant, width: 1),
             ),
           ),
           inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
-            ),
             filled: true,
             fillColor: AppColors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+              borderSide: const BorderSide(color: AppColors.surfaceVariant),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+              borderSide: const BorderSide(color: AppColors.surfaceVariant),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+              borderSide: const BorderSide(color: Colors.white),
+            ),
+            labelStyle: const TextStyle(color: AppColors.textSecondary),
+            hintStyle: const TextStyle(color: AppColors.textTertiary),
+            prefixIconColor: AppColors.textSecondary,
+          ),
+          snackBarTheme: SnackBarThemeData(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.white.withOpacity(0.8),
+            contentTextStyle: const TextStyle(color: Colors.black),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.primary,
-            brightness: Brightness.light,
+          colorScheme: const ColorScheme.dark(
+            primary: Colors.white, // White as primary accent in dark mode
+            onPrimary: Colors.black,
+            secondary: AppColors.surfaceVariant,
+            onSecondary: Colors.white,
+            surface: AppColors.surface,
+            onSurface: Colors.white,
+            background: AppColors.background,
+            onBackground: Colors.white,
+          ),
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: AppColors.textPrimary),
+            bodyMedium: TextStyle(color: AppColors.textPrimary),
+            titleLarge: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
           ),
         ),
         home: const SplashScreen(),
+          );
+        },
       ),
     );
   }

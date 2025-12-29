@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/photo_model.dart';
-import '../models/ocr_result.dart';
+import '../../models/photo_model.dart';
+import '../../models/ocr_result.dart';
 
 abstract class IPhotoService {
   // Permissions
@@ -15,7 +15,7 @@ abstract class IPhotoService {
   
   // Local Media
   Future<List<AssetEntity>> getLatestScreenshots({int count = 50});
-  Future<List<PhotoModel>> processNewScreenshots(String userId, {bool forceReprocess = false});
+  Future<List<PhotoModel>> processNewScreenshots(String userId, {bool forceReprocess = false, List<String>? customCategories});
   Future<Uint8List?> generateThumbnail(String localPath);
   
   // Directory & Files

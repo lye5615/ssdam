@@ -8,9 +8,11 @@ import '../../providers/auth_provider.dart';
 import '../../providers/album_provider.dart';
 import '../../providers/photo_provider.dart';
 import '../../widgets/album_grid.dart';
+import '../../widgets/photo_grid.dart';
 import '../../widgets/permission_dialog.dart';
 import '../notifications/notifications_screen.dart';
 import '../settings/settings_screen.dart';
+import '../photo_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -48,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return;
       }
 
-      final userId = authProvider.firebaseUser!.uid;
+      final userId = authProvider.currentUser!.uid;
 
       // 기본 앨범 초기화 (새 사용자인 경우)
       await albumProvider.loadUserAlbums(userId);
@@ -97,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final albumProvider = Provider.of<AlbumProvider>(context, listen: false);
 
     if (authProvider.isAuthenticated) {
-      final userId = authProvider.firebaseUser!.uid;
+      final userId = authProvider.currentUser!.uid;
       
       // 사진 새로고침 (새로 추가된 사진만 처리 - API 비용 절약)
       await photoProvider.refresh(userId, forceReprocess: false);
@@ -115,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!authProvider.isAuthenticated) return;
 
     try {
-      final userId = authProvider.firebaseUser!.uid;
+      final userId = authProvider.currentUser!.uid;
       
       // 분류 시작 (이미 분류된 사진도 재분류)
       await photoProvider.startClassification(userId);
@@ -160,14 +162,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
+                color: Colors.black, // Replaced explicit primaryGradient
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Center(
-                child: Text(
-                  '🥬',
-                  style: TextStyle(fontSize: 18),
-                ),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 20,
+                    color: Colors.white,
+                  ),
               ),
             ),
             const SizedBox(width: 12),
@@ -181,24 +184,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
         actions: [
-          // 강제 OCR 재처리 버튼
+          // 갤러리 불러오기 버튼 (수동 동기화)
           IconButton(
             onPressed: () async {
               final user = context.read<AuthProvider>().currentUser;
               if (user != null) {
-                await context.read<PhotoProvider>().refresh(user.uid, forceReprocess: true);
+                // forceReprocess: false -> 새 사진만 로드하고 기존 분석 유지
+                await context.read<PhotoProvider>().refresh(user.uid, forceReprocess: false);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('모든 스크린샷을 다시 OCR 분석합니다... (API 비용 발생)'),
+                      content: Text('갤러리에서 최신 스크린샷을 불러옵니다...'),
                       duration: Duration(seconds: 2),
                     ),
                   );
                 }
               }
             },
-            icon: const Icon(Icons.refresh),
-            tooltip: '강제 OCR 재처리 (API 비용 발생)',
+            icon: const Icon(Icons.sync), // 동기화 아이콘으로 변경
+            tooltip: '갤러리 불러오기',
           ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
@@ -223,9 +227,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          indicatorColor: AppColors.primary,
+          labelColor: Theme.of(context).tabBarTheme.labelColor ?? Theme.of(context).colorScheme.primary, 
+          unselectedLabelColor: Theme.of(context).tabBarTheme.unselectedLabelColor ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          indicatorColor: Theme.of(context).tabBarTheme.indicatorColor ?? Theme.of(context).colorScheme.primary,
           indicatorWeight: 3,
           tabs: const [
             Tab(
@@ -288,7 +292,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // 앨범 탭
               RefreshIndicator(
                 onRefresh: _handleRefresh,
-                child: const AlbumGrid(),
+                child: AlbumGrid(
+                  onTabChange: (index) => _tabController.animateTo(index),
+                ),
               ),
               
               // 최근 탭
@@ -316,8 +322,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    // latestScreenshots (AssetEntity) 사용 - 실제 갤러리에서 로드된 사진들
-    if (photoProvider.latestScreenshots.isEmpty) {
+    // Use recentPhotos (PhotoModel) instead of latestScreenshots (AssetEntity)
+    if (photoProvider.recentPhotos.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -338,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             SizedBox(height: 8),
             Text(
-              '갤러리에서 사진을 확인해보세요',
+              '동기화 버튼을 눌러 갤러리를 불러오세요',
               style: TextStyle(
                 color: AppColors.textTertiary,
               ),
@@ -380,20 +386,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         ),
-        // 사진 그리드
+        // 사진 그리드 (PhotoGrid 재사용)
         Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: AppConstants.gridCrossAxisCount,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: AppConstants.gridAspectRatio,
-            ),
-            itemCount: photoProvider.latestScreenshots.length,
-            itemBuilder: (context, index) {
-              final asset = photoProvider.latestScreenshots[index];
-              return _buildAssetTile(asset);
+          child: PhotoGrid(
+            photos: photoProvider.recentPhotos,
+            onPhotoTap: (photo) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PhotoDetailScreen(photo: photo),
+                ),
+              );
+            },
+            onPhotoLongPress: (photo) {
+              // Option to show options bottom sheet
             },
           ),
         ),
@@ -408,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    if (photoProvider.favoriteScreenshots.isEmpty) {
+    if (photoProvider.favoritePhotos.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -429,7 +435,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             SizedBox(height: 8),
             Text(
-              '사진을 길게 눌러 즐겨찾기에 추가하세요',
+              '사진을 즐겨찾기에 추가해보세요',
               style: TextStyle(
                 color: AppColors.textTertiary,
               ),
@@ -439,80 +445,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: AppConstants.gridCrossAxisCount,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: AppConstants.gridAspectRatio,
-      ),
-      itemCount: photoProvider.favoriteScreenshots.length,
-      itemBuilder: (context, index) {
-        final asset = photoProvider.favoriteScreenshots[index];
-        return _buildAssetTile(asset);
+    return PhotoGrid(
+      photos: photoProvider.favoritePhotos,
+      onPhotoTap: (photo) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PhotoDetailScreen(photo: photo),
+          ),
+        );
       },
     );
   }
+  // _buildAssetTile removed as it is replaced by PhotoGrid internal logic
 
-  Widget _buildAssetTile(AssetEntity asset) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // AssetEntity에서 이미지 표시
-          FutureBuilder<Uint8List?>(
-            future: asset.thumbnailData,
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data != null) {
-                return Image.memory(
-                  snapshot.data!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _placeholder();
-                  },
-                );
-              } else if (snapshot.hasError) {
-                return _placeholder();
-              } else {
-                return _placeholder();
-              }
-            },
-          ),
-          // 상단 우측 즐겨찾기 버튼
-          Positioned(
-            top: 8,
-            right: 8,
-            child: Consumer<PhotoProvider>(
-              builder: (context, photoProvider, child) {
-                // 해당 AssetEntity가 즐겨찾기인지 확인
-                final isFavorite = photoProvider.isAssetFavorite(asset);
-                
-                return GestureDetector(
-                  onTap: () async {
-                    await _toggleAssetFavorite(context, asset, photoProvider);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(
-                      isFavorite ? Icons.favorite : Icons.favorite_border,
-                      size: 18,
-                      color: isFavorite ? Colors.red : Colors.white,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // AssetEntity 즐겨찾기 토글
   Future<void> _toggleAssetFavorite(BuildContext context, AssetEntity asset, PhotoProvider photoProvider) async {
@@ -544,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _placeholder() {
     return Container(
       decoration: BoxDecoration(
-        gradient: AppColors.backgroundGradient,
+        color: AppColors.surfaceVariant, // Replaced backgroundGradient
       ),
       child: const Center(
         child: Icon(

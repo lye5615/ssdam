@@ -1,6 +1,6 @@
 class AppConstants {
   // App Information
-  static const String appName = '김치찜';
+  static const String appName = '쓰담';
   static const String appVersion = '1.0.0';
   
   // Firebase Collections

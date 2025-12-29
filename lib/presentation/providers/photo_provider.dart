@@ -111,17 +111,12 @@ class PhotoProvider extends ChangeNotifier {
     }
   }
 
-  // 갤러리 변화 감지 시작 (현재 비활성화 - photo_manager API 호환성 문제)
-  Future<void> startGalleryChangeListener() async {
-    // 현재 photo_manager 패키지에서 갤러리 변화 감지 API가 불안정하여 비활성화
-    print('⚠️ 갤러리 변화 감지 기능이 현재 비활성화되어 있습니다.');
-    print('💡 수동 새로고침을 사용하거나 앱을 재시작하여 최신 사진을 확인하세요.');
-  }
+  // 갤러리 변화 감지 시작
+  // 갤러리 변화 감지 기능 제거 (사용자 요청: 수동 불러오기만 사용)
+  // void startGalleryChangeListener() { ... }
+  // void stopGalleryChangeListener() { ... }
 
-  // 갤러리 변화 감지 중지 (현재 비활성화)
-  void stopGalleryChangeListener() {
-    // 현재 비활성화됨
-  }
+
 
   // 웹에서 사진 선택 및 처리
   Future<List<PhotoModel>> pickAndProcessImages(String userId) async {
@@ -249,7 +244,15 @@ class PhotoProvider extends ChangeNotifier {
       _setProcessing(true);
       _clearError();
       
-      final newPhotos = await _photoService.processNewScreenshots(userId, forceReprocess: forceReprocess);
+      // Get custom categories (albums)
+      final albums = await _firestoreService.getUserAlbums(userId);
+      final customCategories = albums.map((a) => a.name).toList();
+      
+      final newPhotos = await _photoService.processNewScreenshots(
+        userId, 
+        forceReprocess: forceReprocess,
+        customCategories: customCategories,
+      );
       
       // 로컬 목록 업데이트
       _photos.insertAll(0, newPhotos);
@@ -324,14 +327,20 @@ class PhotoProvider extends ChangeNotifier {
   }
 
   // 사진을 다른 앨범으로 이동
-  Future<bool> movePhotoToAlbum(String photoId, String newAlbumId) async {
+  Future<bool> movePhotoToAlbum(String photoId, String newAlbumId, {String? newCategoryName}) async {
     try {
       _clearError();
       
       await _photoService.movePhotoToAlbum(photoId, newAlbumId);
       
       // 로컬 목록에서 해당 사진 업데이트
-      _updatePhotoInLists(photoId, (photo) => photo.copyWith(albumId: newAlbumId));
+      _updatePhotoInLists(photoId, (photo) {
+        var updated = photo.copyWith(albumId: newAlbumId);
+        if (newCategoryName != null) {
+          updated = updated.copyWith(category: newCategoryName);
+        }
+        return updated;
+      });
       
       return true;
     } catch (e) {
@@ -461,12 +470,25 @@ class PhotoProvider extends ChangeNotifier {
       }
     } else {
       // 즐겨찾기가 추가된 경우
+      // _photos에서 찾아야 함 (이미 업데이트된 상태여야 함)
+      // 하지만 여기서는 updater를 사용해 새 상태를 만들어야 함
       final mainPhotoIndex = _photos.indexWhere((photo) => photo.id == photoId);
       if (mainPhotoIndex != -1) {
-        final updatedPhoto = updater(_photos[mainPhotoIndex]);
+        // 이미 _photos는 위에서 업데이트됨
+        final updatedPhoto = _photos[mainPhotoIndex];
         if (updatedPhoto.isFavorite) {
           _favoritePhotos.insert(0, updatedPhoto);
         }
+      } 
+      // 만약 _photos에 없다면 (예: 부분 로드), _recentPhotos 확인
+      else {
+          final recentIndex = _recentPhotos.indexWhere((photo) => photo.id == photoId);
+          if (recentIndex != -1) {
+             final updatedPhoto = _recentPhotos[recentIndex];
+             if (updatedPhoto.isFavorite) {
+                _favoritePhotos.insert(0, updatedPhoto);
+             }
+          }
       }
     }
 
@@ -531,7 +553,7 @@ class PhotoProvider extends ChangeNotifier {
         loadFavoritePhotos(userId),
         loadLatestScreenshots(),
       ]);
-      await startGalleryChangeListener();
+      // await startGalleryChangeListener(); // Auto-sync disabled
     }
   }
 
@@ -600,6 +622,16 @@ class PhotoProvider extends ChangeNotifier {
     return _favoriteScreenshots.any((fav) => fav.id == asset.id);
   }
 
+  // ID로 AssetEntity 찾기
+  AssetEntity? findAssetById(String id) {
+    if (id.isEmpty) return null;
+    try {
+      return _latestScreenshots.firstWhere((asset) => asset.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
   // 기본 앨범들 생성
   Future<void> createDefaultAlbums(String userId) async {
     try {
@@ -641,18 +673,13 @@ class PhotoProvider extends ChangeNotifier {
   }
 
   // 카테고리별 아이콘 경로 반환 (Internal)
+  // 카테고리별 아이콘 경로 반환 (Internal)
+  // 카테고리별 아이콘 경로 반환 (Internal) - 이모지 대신 텍스트(한글) 사용
   String _getCategoryIconPath(String category) {
-    switch (category) {
-      case '옷': return 'assets/icons/clothes.png';
-      case '제품': return 'assets/icons/product.png';
-      case '정보/참고용': return 'assets/icons/info.png';
-      case '일정/예약': return 'assets/icons/schedule.png';
-      case '증빙/거래': return 'assets/icons/receipt.png';
-      case '재미/밈/감정': return 'assets/icons/fun.png';
-      case '학습/업무 메모': return 'assets/icons/work.png';
-      case '대화/메시지': return 'assets/icons/message.png';
-      default: return 'assets/icons/default.png';
-    }
+    // 사용자가 "글자만 넣을 것" 요청 -> 아이콘 대신 카테고리 이름 자체를 반환하거나 약어 반환
+    // UI에서 fontSize 조절 필요
+    // 여기서는 전체 이름을 반환하고 UI에서 처리
+    return category;
   }
 
   // 폴더 위치 정보 가져오기
@@ -673,6 +700,30 @@ class PhotoProvider extends ChangeNotifier {
       }
     }
     print('✅ 웹 이미지 캐시 초기화 완료: ${_photos.length}개 사진');
+  }
+
+  // ID로 사진 가져오기
+  PhotoModel? getPhoto(String id) {
+    try {
+      return _photos.firstWhere((p) => p.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 카테고리의 대표 사진(최신) 반환
+  PhotoModel? getCoverPhotoForCategory(String categoryName) {
+    try {
+      final categoryPhotos = _photos.where((p) => p.category == categoryName).toList();
+      if (categoryPhotos.isNotEmpty) {
+        // 최신순 정렬 (이미 되어있을 수 있지만 보장)
+        categoryPhotos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return categoryPhotos.first;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   @override

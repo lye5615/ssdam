@@ -148,10 +148,11 @@ class _LoginScreenState extends State<LoginScreen>
                                 ],
                               ),
                               child: const Center(
-                                child: Text(
-                                  '🥬',
-                                  style: TextStyle(fontSize: 50),
-                                ),
+                                    child: Icon(
+                                    Icons.auto_awesome,
+                                    size: 50,
+                                    color: Colors.white,
+                                  ),
                               ),
                             ),
                             
@@ -160,21 +161,21 @@ class _LoginScreenState extends State<LoginScreen>
                             // 앱 이름과 설명
                             Text(
                               AppConstants.appName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
                             
                             const SizedBox(height: 12),
                             
-                            const Text(
+                            Text(
                               '스크린샷을 AI로 자동 분류하고\n똑똑하게 관리해보세요',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
-                                color: AppColors.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 height: 1.5,
                               ),
                             ),
@@ -210,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         : _handleGoogleSignIn,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.white,
-                                      foregroundColor: AppColors.textPrimary,
+                                      foregroundColor: Colors.black, // Fixed: Black text on White bg
                                       side: const BorderSide(
                                         color: AppColors.border,
                                         width: 1,
@@ -229,16 +230,9 @@ class _LoginScreenState extends State<LoginScreen>
                                               strokeWidth: 2,
                                             ),
                                           )
-                                        : Image.asset(
-                                            'assets/icons/google_logo.png',
-                                            width: 20,
-                                            height: 20,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return const Icon(
-                                                Icons.login,
-                                                size: 20,
-                                              );
-                                            },
+                                        : const Icon(
+                                            Icons.g_mobiledata, // Fallback to G icon or Login icon
+                                            size: 24,
                                           ),
                                     label: const Text(
                                       'Google로 계속하기',
@@ -266,8 +260,8 @@ class _LoginScreenState extends State<LoginScreen>
                                           ? null 
                                           : _handleAppleSignIn,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppColors.textPrimary,
-                                        foregroundColor: Colors.white,
+                                        backgroundColor: Theme.of(context).colorScheme.primary,
+                                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(
                                             AppConstants.buttonBorderRadius,
@@ -309,7 +303,7 @@ class _LoginScreenState extends State<LoginScreen>
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.textTertiary,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                 height: 1.4,
                               ),
                             ),

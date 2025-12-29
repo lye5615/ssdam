@@ -1,7 +1,7 @@
-import '../models/user_model.dart';
-import '../models/album_model.dart';
-import '../models/photo_model.dart';
-import '../models/reminder_model.dart';
+import '../../models/user_model.dart';
+import '../../models/album_model.dart';
+import '../../models/photo_model.dart';
+import '../../models/reminder_model.dart';
 
 abstract class IFirestoreService {
   // User CRUD
