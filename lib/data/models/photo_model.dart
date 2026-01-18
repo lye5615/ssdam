@@ -1,5 +1,10 @@
 import 'package:equatable/equatable.dart';
 
+enum PhotoSource {
+  galleryAsset,
+  appFile,
+}
+
 class PhotoModel extends Equatable {
   final String id;
   final String localPath;
@@ -16,7 +21,13 @@ class PhotoModel extends Equatable {
   final String? ocrText;
   final Map<String, dynamic> metadata;
   final List<String> tags;
+
   final String? assetEntityId; // AssetEntity ID for gallery change detection
+  
+  // Smart Classification Fields
+  final PhotoSource source;
+  final List<String>? textHints; // Keywords found via OCR relevant for rules
+  final String? classificationReason; // "Matched Rule: 'coupang' (Keyword)"
 
   const PhotoModel({
     required this.id,
@@ -35,6 +46,9 @@ class PhotoModel extends Equatable {
     this.metadata = const {},
     this.tags = const [],
     this.assetEntityId,
+    this.source = PhotoSource.galleryAsset, // Default for backward compatibility
+    this.textHints,
+    this.classificationReason,
   });
 
   factory PhotoModel.fromJson(Map<String, dynamic> json) {
@@ -54,7 +68,13 @@ class PhotoModel extends Equatable {
       ocrText: json['ocrText'] as String?,
       metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
       tags: List<String>.from(json['tags'] ?? []),
+
       assetEntityId: json['assetEntityId'] as String?,
+      source: json['source'] != null 
+          ? PhotoSource.values.byName(json['source'] as String)
+          : PhotoSource.galleryAsset,
+      textHints: (json['textHints'] as List<dynamic>?)?.map((e) => e as String).toList(),
+      classificationReason: json['classificationReason'] as String?,
     );
   }
 
@@ -91,6 +111,9 @@ class PhotoModel extends Equatable {
       'metadata': metadata,
       'tags': tags,
       'assetEntityId': assetEntityId,
+      'source': source.name,
+      'textHints': textHints,
+      'classificationReason': classificationReason,
     };
   }
 
@@ -111,6 +134,9 @@ class PhotoModel extends Equatable {
     Map<String, dynamic>? metadata,
     List<String>? tags,
     String? assetEntityId,
+    PhotoSource? source,
+    List<String>? textHints,
+    String? classificationReason,
   }) {
     return PhotoModel(
       id: id ?? this.id,
@@ -129,6 +155,9 @@ class PhotoModel extends Equatable {
       metadata: metadata ?? this.metadata,
       tags: tags ?? this.tags,
       assetEntityId: assetEntityId ?? this.assetEntityId,
+      source: source ?? this.source,
+      textHints: textHints ?? this.textHints,
+      classificationReason: classificationReason ?? this.classificationReason,
     );
   }
 
@@ -150,5 +179,8 @@ class PhotoModel extends Equatable {
         metadata,
         tags,
         assetEntityId,
+        source,
+        textHints,
+        classificationReason,
       ];
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import '../interfaces/i_firestore_service.dart';
 import '../../models/user_model.dart';
 import '../../models/album_model.dart';
+import '../../models/rule_model.dart';
 import '../../models/photo_model.dart';
 import '../../models/reminder_model.dart';
 import '../../../core/constants/app_constants.dart';
@@ -145,6 +146,39 @@ class MockFirestoreService implements IFirestoreService {
     _albums.removeWhere((key, value) => value.userId == uid);
     _photos.removeWhere((key, value) => value.userId == uid);
     _reminders.removeWhere((key, value) => value.userId == uid);
+  }
+
+  // --- Rules ---
+  final List<RuleModel> _rules = [];
+
+  @override
+  Future<List<RuleModel>> getUserRules(String userId) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    return _rules.where((r) => r.userId == userId).toList(); // Filter by userId
+  }
+
+  @override
+  Future<String> createRule(String userId, RuleModel rule) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    final newRule = RuleModel(
+      id: 'rule_${DateTime.now().millisecondsSinceEpoch}',
+      type: rule.type,
+      pattern: rule.pattern,
+      categoryId: rule.categoryId,
+      categoryName: rule.categoryName,
+      weight: rule.weight,
+      source: rule.source,
+      createdAt: DateTime.now(),
+      userId: userId, // Ensure userId is set
+    );
+    _rules.add(newRule);
+    return newRule.id;
+  }
+
+  @override
+  Future<void> deleteRule(String ruleId) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+    _rules.removeWhere((r) => r.id == ruleId);
   }
 
   // Album

@@ -10,10 +10,13 @@ import '../../data/services/mock/mock_auth_service.dart';
 import '../../data/services/mock/mock_firestore_service.dart';
 import '../../data/services/mock/mock_photo_service.dart';
 
+import '../../data/services/rule_service.dart';
+
 class ServiceLocator {
   static late IAuthService authService;
   static late IFirestoreService firestoreService;
   static late IPhotoService photoService;
+  static late RuleService ruleService;
 
   static void init({bool useMock = false}) {
     print('🔧 ServiceLocator Initializing... Mode: ${useMock ? "MOCK" : "REAL"}');
@@ -27,6 +30,9 @@ class ServiceLocator {
       authService = FirebaseAuthService();
       photoService = FirebasePhotoService();
     }
+    
+    // RuleService doesn't need mock switch yet, logic is local
+    ruleService = RuleService();
     
     print('✅ ServiceLocator Initialized');
   }

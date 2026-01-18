@@ -261,7 +261,46 @@ class MockPhotoService implements IPhotoService {
 
   @override
   Future<List<PhotoModel>> searchPhotos(String userId, String query) async {
-    return await ServiceLocator.firestoreService.getUserPhotos(userId); // Simple return all for now or filter
+    final allPhotos = await ServiceLocator.firestoreService.getUserPhotos(userId);
+    
+    if (query.trim().isEmpty) {
+      return [];
+    }
+    
+    print('🔍 Search Debug (Mock): Query="$query", Total Photos=${allPhotos.length}');
+    
+    final results = allPhotos.where((photo) {
+      // Skip photos that don't have any keyword metadata
+      final hasTags = photo.tags.isNotEmpty;
+      final hasHints = photo.textHints != null && photo.textHints!.isNotEmpty;
+      
+      if (!hasTags && !hasHints) {
+        print('⏭️  [SKIP] ${photo.fileName} - No tags or hints (unprocessed)');
+        return false;
+      }
+      
+      // ONLY search tags and textHints - NOT category or OCR text
+      final tags = photo.tags.join(' ').toLowerCase();
+      final textHints = photo.textHints?.join(' ').toLowerCase() ?? '';
+      final searchQuery = query.toLowerCase();
+      
+      final matTags = tags.isNotEmpty && tags.contains(searchQuery);
+      final matHints = textHints.isNotEmpty && textHints.contains(searchQuery);
+      
+      final isMatch = matTags || matHints;
+      
+      if (isMatch) {
+        print('✅ [MATCH] ${photo.fileName}');
+        print('   - Matched in: ${matTags ? "TAGS" : ""} ${matHints ? "TEXT_HINTS" : ""}');
+        print('   - Tags: ${photo.tags}');
+        print('   - Hints: ${photo.textHints}');
+      }
+      
+      return isMatch;
+    }).toList();
+    
+    print('🎯 Search Results (Mock): ${results.length} photos matched query "$query"');
+    return results;
   }
 
   @override

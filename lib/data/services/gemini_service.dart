@@ -87,6 +87,7 @@ class GeminiService {
               confidence: (parsedData['confidence'] ?? 0.8).toDouble(),
               tags: List<String>.from(parsedData['tags'] ?? []),
               reasoning: parsedData['reasoning'] ?? '분류 근거 없음',
+              textHints: List<String>.from(parsedData['text_hints'] ?? []),
             );
             print('✅ OCR 결과: ${result.category} (신뢰도: ${result.confidence})');
             print('📝 분류 근거: ${result.reasoning}');
@@ -158,6 +159,7 @@ class GeminiService {
             confidence: (parsedData['confidence'] ?? 0.8).toDouble(),
             tags: List<String>.from(parsedData['tags'] ?? []),
             reasoning: parsedData['reasoning'] ?? '분류 근거 없음',
+            textHints: List<String>.from(parsedData['text_hints'] ?? []),
           );
           print('✅ OCR 결과: ${result.category} (신뢰도: ${result.confidence})');
           print('📝 분류 근거: ${result.reasoning}');
@@ -787,14 +789,17 @@ $customCategoryText
    - 웹페이지, 참고 자료
    - 기타 분류되지 않는 내용
 
-**응답 형식 (JSON):**
-{
   "extracted_text": "추출된 텍스트",
   "category": "분류된 카테고리(사용자 정의 카테고리 포함)",
   "confidence": 0.95,
   "tags": ["태그1", "태그2", "태그3"],
+  "text_hints": ["키워드1", "키워드2"],
   "reasoning": "분류한 구체적인 이유와 근거를 상세히 설명"
 }
+
+**text_hints 가이드:**
+- 'text_hints'에는 분류에 결정적인 영향을 미친 텍스트 키워드들(예: '쿠팡', '스타벅스', '인증번호', '결제완료')을 추출해주세요.
+- 이는 추후 규칙 기반 분류에 사용됩니다.
 
 **중요:** 텍스트가 없거나 읽을 수 없는 경우에도 이미지의 시각적 특성을 바탕으로 분류해주세요.
 ''';

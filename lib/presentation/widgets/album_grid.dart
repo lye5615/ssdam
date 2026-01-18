@@ -382,33 +382,8 @@ class _PremiumAlbumCard extends StatelessWidget {
   }
 
   Widget _buildCoverImage(BuildContext context) {
-    if (coverPhoto == null) return _buildGradientBackground();
-
-    if (kIsWeb) {
-       // Web: Try to get from cache
-       // Note: This requires access to PhotoProvider. 
-       // Since this is inside consumer, we might need to pass bytes or provider.
-       // However, StatelessWidget context gives access.
-       final provider = Provider.of<PhotoProvider>(context, listen: false);
-       final bytes = provider.getWebImageBytes(coverPhoto!.id);
-       if (bytes != null) {
-         return Image.memory(
-           bytes,
-           fit: BoxFit.cover,
-           errorBuilder: (context, error, stackTrace) => _buildGradientBackground(),
-         );
-       }
-       // Fallback for Web if not in memory (maybe just use gradient for safety or try network if url existed)
-       return _buildGradientBackground();
-    } else {
-       // Mobile: Use File
-       if (coverPhoto!.localPath.isEmpty) return _buildGradientBackground();
-       return Image.file(
-         File(coverPhoto!.localPath),
-         fit: BoxFit.cover,
-         errorBuilder: (context, error, stackTrace) => _buildGradientBackground(),
-       );
-    }
+    // User requested to disable dynamic covers and always use solid/gradient color.
+    return _buildGradientBackground();
   }
 
   void _showAlbumOptions(BuildContext context) {

@@ -276,6 +276,7 @@ class FirebasePhotoService implements IPhotoService {
             if (productSearch != null) 'product_search': productSearch,
           },
           tags: ocrResult.tags,
+          textHints: ocrResult.textHints,
           assetEntityId: screenshot.id,
         );
 
@@ -304,6 +305,7 @@ class FirebasePhotoService implements IPhotoService {
                 'reclassified_at': DateTime.now().toIso8601String(),
               },
               tags: ocrResult.tags,
+              textHints: ocrResult.textHints,
             );
             
             await _firestoreService.updatePhoto(updatedPhoto);
@@ -518,18 +520,40 @@ class FirebasePhotoService implements IPhotoService {
   Future<List<PhotoModel>> searchPhotos(String userId, String query) async {
     final allPhotos = await _firestoreService.getUserPhotos(userId);
     
-    return allPhotos.where((photo) {
-      final ocrText = photo.ocrText?.toLowerCase() ?? '';
-      final fileName = photo.fileName.toLowerCase();
-      final category = photo.category.toLowerCase();
+    print('🔍 Search Debug: Query="$query", Total Photos=${allPhotos.length}');
+    
+    final results = allPhotos.where((photo) {
+      // Skip photos that don't have any keyword metadata
+      final hasTags = photo.tags.isNotEmpty;
+      final hasHints = photo.textHints != null && photo.textHints!.isNotEmpty;
+      
+      if (!hasTags && !hasHints) {
+        print('⏭️  [SKIP] ${photo.fileName} - No tags or hints (unprocessed)');
+        return false;
+      }
+      
+      // ONLY search tags and textHints - NOT category or OCR text
       final tags = photo.tags.join(' ').toLowerCase();
+      final textHints = photo.textHints?.join(' ').toLowerCase() ?? '';
       final searchQuery = query.toLowerCase();
       
-      return ocrText.contains(searchQuery) ||
-             fileName.contains(searchQuery) ||
-             category.contains(searchQuery) ||
-             tags.contains(searchQuery);
+      final matTags = tags.isNotEmpty && tags.contains(searchQuery);
+      final matHints = textHints.isNotEmpty && textHints.contains(searchQuery);
+      
+      final isMatch = matTags || matHints;
+      
+      if (isMatch) {
+        print('✅ [MATCH] ${photo.fileName}');
+        print('   - Matched in: ${matTags ? "TAGS" : ""} ${matHints ? "TEXT_HINTS" : ""}');
+        print('   - Tags: ${photo.tags}');
+        print('   - Hints: ${photo.textHints}');
+      }
+      
+      return isMatch;
     }).toList();
+    
+    print('🎯 Search Results: ${results.length} photos matched query "$query"');
+    return results;
   }
 
   Future<String> _moveFileToCategoryFolder(File originalFile, String category, String userId) async {

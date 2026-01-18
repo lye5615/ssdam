@@ -12,6 +12,7 @@ class AlbumModel extends Equatable {
   final bool isPinned;
   final bool isDefault;
   final String userId;
+  final String? exportAlbumId; // ID of the album in the device gallery for sync
 
   const AlbumModel({
     required this.id,
@@ -24,7 +25,9 @@ class AlbumModel extends Equatable {
     required this.updatedAt,
     this.isPinned = false,
     this.isDefault = false,
+
     required this.userId,
+    this.exportAlbumId,
   });
 
   factory AlbumModel.fromJson(Map<String, dynamic> json) {
@@ -40,6 +43,7 @@ class AlbumModel extends Equatable {
       isPinned: json['isPinned'] as bool? ?? false,
       isDefault: json['isDefault'] as bool? ?? false,
       userId: json['userId'] as String,
+      exportAlbumId: json['exportAlbumId'] as String?,
     );
   }
 
@@ -56,6 +60,7 @@ class AlbumModel extends Equatable {
       'isPinned': isPinned,
       'isDefault': isDefault,
       'userId': userId,
+      'exportAlbumId': exportAlbumId,
     };
   }
 
@@ -71,6 +76,7 @@ class AlbumModel extends Equatable {
     bool? isPinned,
     bool? isDefault,
     String? userId,
+    String? exportAlbumId,
   }) {
     return AlbumModel(
       id: id ?? this.id,
@@ -84,6 +90,7 @@ class AlbumModel extends Equatable {
       isPinned: isPinned ?? this.isPinned,
       isDefault: isDefault ?? this.isDefault,
       userId: userId ?? this.userId,
+      exportAlbumId: exportAlbumId ?? this.exportAlbumId,
     );
   }
 
@@ -99,6 +106,8 @@ class AlbumModel extends Equatable {
         updatedAt,
         isPinned,
         isDefault,
+
         userId,
+        exportAlbumId,
       ];
 }

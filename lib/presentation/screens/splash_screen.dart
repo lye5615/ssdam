@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../providers/auth_provider.dart';
 import 'auth/login_screen.dart';
 import 'home/home_screen.dart';
+import 'onboarding/initial_scan_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -68,9 +69,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _navigateToHome() {
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) => const InitialScanScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
