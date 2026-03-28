@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -----------------------------
+    // Helpers
+    // -----------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // 문서의 userId가 현재 로그인 uid와 일치하는지
+    function isOwner(resourceData) {
+      return isSignedIn() && resourceData.userId == uid();
+    }
+
+    // create/update 시 전달되는 데이터의 userId가 내 uid인지
+    function isCreatingAsSelf() {
+      return isSignedIn()
+        && request.resource.data.userId == uid();
+    }
+
+    // userId 같은 핵심 필드는 수정 불가 (불변 강제)
+    // userId가 요청에 없으면 (부분 업데이트) 허용
+    function userIdIsNotChanged() {
+      return !("userId" in request.resource.data)
+        || request.resource.data.userId == resource.data.userId;
+    }
+
+    // albumId가 가리키는 앨범이 존재하고, 그 앨범이 내 소유인지
+    function ownsAlbum(albumId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/albums/$(albumId))
+        && get(/databases/$(database)/documents/albums/$(albumId)).data.userId == uid();
+    }
+
+    // -----------------------------
+    // users: 본인 문서만 read/write
+    // -----------------------------
+    match /users/{userId} {
+      allow read, create, update, delete: if isSignedIn() && userId == uid();
+    }
+
+    // -----------------------------
+    // albums: 본인 앨범만 read/write
+    // 필수: albums 문서에 userId 필드 존재
+    // -----------------------------
+    match /albums/{albumId} {
+      allow read: if isOwner(resource.data);
+
+      allow create: if isCreatingAsSelf();
+
+      // photoCount는 서버에서 계산되므로 별도 허용
+      // userId는 변경 불가
+      allow update: if isOwner(resource.data)
+                    && userIdIsNotChanged();
+
+      allow delete: if isOwner(resource.data);
+    }
+
+    // -----------------------------
+    // photos: 본인 사진만 read/write
+    // + album-photo 일관성 체크
+    // 필수: photos 문서에 userId, albumId 필드 존재 (albumId가 nullable이면 조건 조정)
+    // -----------------------------
+    match /photos/{photoId} {
+      allow read: if isOwner(resource.data);
+
+      // 생성: userId는 반드시 내 uid, albumId가 있으면 그 앨범도 내 소유
+      allow create: if isCreatingAsSelf()
+                    && (
+                      !("albumId" in request.resource.data)
+                      || request.resource.data.albumId == null
+                      || ownsAlbum(request.resource.data.albumId)
+                    );
+
+      // 수정: 기존 문서가 내 소유 + userId 변경 금지
+      // albumId가 변경될 때만 소유권 체크 (exists 호출 최소화)
+      allow update: if isOwner(resource.data)
+                    && userIdIsNotChanged()
+                    && (
+                      // albumId가 변경되지 않으면 체크 스킵
+                      !("albumId" in request.resource.data)
+                      || request.resource.data.albumId == resource.data.albumId
+                      // albumId가 변경되는 경우에만 소유권 확인
+                      || request.resource.data.albumId == null
+                      || ownsAlbum(request.resource.data.albumId)
+                    );
+
+      allow delete: if isOwner(resource.data);
+    }
+
+    // -----------------------------
+    // reminders: 본인 리마인더만 read/write
+    // 필수: reminders 문서에 userId 필드 존재
+    // -----------------------------
+    match /reminders/{reminderId} {
+      allow read: if isOwner(resource.data);
+
+      allow create: if isCreatingAsSelf();
+
+      allow update: if isOwner(resource.data)
+                    && userIdIsNotChanged();
+
+      allow delete: if isOwner(resource.data);
+    }
+  }
+}

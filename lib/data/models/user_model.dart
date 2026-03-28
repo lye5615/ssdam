@@ -7,6 +7,7 @@ class UserModel extends Equatable {
   final String? photoUrl;
   final DateTime createdAt;
   final DateTime lastLoginAt;
+  final String? fcmToken;
   final Map<String, dynamic> preferences;
 
   const UserModel({
@@ -16,6 +17,7 @@ class UserModel extends Equatable {
     this.photoUrl,
     required this.createdAt,
     required this.lastLoginAt,
+    this.fcmToken,
     this.preferences = const {},
   });
 
@@ -27,6 +29,7 @@ class UserModel extends Equatable {
       photoUrl: json['photoUrl'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       lastLoginAt: DateTime.parse(json['lastLoginAt'] as String),
+      fcmToken: json['fcmToken'] as String?,
       preferences: Map<String, dynamic>.from(json['preferences'] ?? {}),
     );
   }
@@ -39,6 +42,7 @@ class UserModel extends Equatable {
       'photoUrl': photoUrl,
       'createdAt': createdAt.toIso8601String(),
       'lastLoginAt': lastLoginAt.toIso8601String(),
+      'fcmToken': fcmToken,
       'preferences': preferences,
     };
   }
@@ -50,6 +54,7 @@ class UserModel extends Equatable {
     String? photoUrl,
     DateTime? createdAt,
     DateTime? lastLoginAt,
+    String? fcmToken,
     Map<String, dynamic>? preferences,
   }) {
     return UserModel(
@@ -59,6 +64,7 @@ class UserModel extends Equatable {
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      fcmToken: fcmToken ?? this.fcmToken,
       preferences: preferences ?? this.preferences,
     );
   }
@@ -71,6 +77,7 @@ class UserModel extends Equatable {
         photoUrl,
         createdAt,
         lastLoginAt,
+        fcmToken,
         preferences,
       ];
 }

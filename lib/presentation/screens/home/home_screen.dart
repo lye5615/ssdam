@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:photo_manager/photo_manager.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../providers/auth_provider.dart';
@@ -14,6 +16,7 @@ import '../notifications/notifications_screen.dart';
 import '../settings/settings_screen.dart';
 import '../photo_detail_screen.dart';
 import '../search/search_screen.dart';
+import '../../../data/services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,8 +46,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (!authProvider.isAuthenticated) return;
 
     try {
-      // 권한 확인 및 요청
+      // 첫 이용자 권한 안내 팝업 확인
+      final prefs = await SharedPreferences.getInstance();
+      final hasShownIntro = prefs.getBool('has_shown_permission_intro') ?? false;
+
+      if (!hasShownIntro && mounted) {
+        final result = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const IntroPermissionDialog(),
+        );
+        
+        if (result == true) {
+          await prefs.setBool('has_shown_permission_intro', true);
+        } else {
+          // 사용자가 '나중에'를 선택한 경우 권한 없이 계속 진행 (기능 제한됨)
+          return;
+        }
+      }
+
+      // 실제 시스템 권한 확인 및 요청
       final hasPermissions = await photoProvider.requestPermissions();
+      final notificationService = NotificationService();
+      await notificationService.requestPermissions();
       
       if (!hasPermissions && mounted) {
         _showPermissionDialog();
@@ -110,42 +134,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _startClassification() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final photoProvider = Provider.of<PhotoProvider>(context, listen: false);
-    final albumProvider = Provider.of<AlbumProvider>(context, listen: false);
-
-    if (!authProvider.isAuthenticated) return;
-
-    try {
-      final userId = authProvider.currentUser!.uid;
-      
-      // 분류 시작 (이미 분류된 사진도 재분류)
-      await photoProvider.startClassification(userId);
-      
-      // 앨범 데이터도 새로고침
-      await albumProvider.loadUserAlbums(userId);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('분류가 완료되었습니다!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('분류 중 오류가 발생했습니다: $e'),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -185,43 +173,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
         actions: [
-          // 기존 사용자용 분류 시작 버튼 (사진이 1개 이상일 때만 표시)
+          // 통합된 동기화 버튼 (갤러리 불러오기 + Gemini 분류)
           Consumer<PhotoProvider>(
             builder: (context, photoProvider, child) {
-              if (photoProvider.recentPhotos.isNotEmpty) {
-                return IconButton(
-                  onPressed: photoProvider.isProcessing ? null : () => _startClassification(),
-                  icon: photoProvider.isProcessing
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.auto_awesome),
-                  tooltip: '사진 분류 시작',
-                );
-              }
-              return const SizedBox.shrink();
+              return IconButton(
+                onPressed: photoProvider.isProcessing ? null : () async {
+                  final user = context.read<AuthProvider>().currentUser;
+                  if (user != null) {
+                    // 갤러리에서 새 사진 불러오기 + Gemini로 자동 분류
+                    await photoProvider.refresh(user.uid, forceReprocess: false);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('새 사진을 불러와 분류했습니다!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  }
+                },
+                icon: photoProvider.isProcessing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync),
+                tooltip: '새 사진 불러오기 및 분류',
+              );
             },
-          ),
-          // 갤러리 불러오기 버튼 (수동 동기화)
-          IconButton(
-            onPressed: () async {
-              final user = context.read<AuthProvider>().currentUser;
-              if (user != null) {
-                await context.read<PhotoProvider>().refresh(user.uid, forceReprocess: false);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('갤러리에서 최신 스크린샷을 불러옵니다...'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              }
-            },
-            icon: const Icon(Icons.sync),
-            tooltip: '갤러리 불러오기',
           ),
           IconButton(
             onPressed: () {
@@ -391,41 +371,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            child: ElevatedButton.icon(
-              onPressed: photoProvider.isProcessing ? null : () => _startClassification(),
-              icon: photoProvider.isProcessing 
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.auto_awesome),
-              label: Text(
-                photoProvider.isProcessing ? '분류 중...' : '사진 불러오기 및 분류 시작',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+            child: Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                return ElevatedButton.icon(
+                  onPressed: photoProvider.isProcessing ? null : () async {
+                    final userId = authProvider.currentUser?.uid;
+                    if (userId != null) {
+                      await photoProvider.refresh(userId, forceReprocess: false);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('새 사진을 불러와 분류했습니다!'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: photoProvider.isProcessing 
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.sync),
+                  label: Text(
+                    photoProvider.isProcessing ? '분류 중...' : '사진 불러오기 및 분류 시작',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         // 사진 그리드 (PhotoGrid 재사용)
         Expanded(
           child: PhotoGrid(
             photos: photoProvider.recentPhotos,
-            onPhotoTap: (photo) {
+            onPhotoTap: (photos, index) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => PhotoDetailScreen(photo: photo),
+                  builder: (_) => PhotoDetailScreen(
+                    allPhotos: photos,
+                    initialIndex: index,
+                  ),
                 ),
               );
             },
@@ -478,11 +478,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return PhotoGrid(
       photos: photoProvider.favoritePhotos,
-      onPhotoTap: (photo) {
+      onPhotoTap: (photos, index) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PhotoDetailScreen(photo: photo),
+            builder: (_) => PhotoDetailScreen(
+              allPhotos: photos,
+              initialIndex: index,
+            ),
           ),
         );
       },

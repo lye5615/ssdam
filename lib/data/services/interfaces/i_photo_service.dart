@@ -29,10 +29,10 @@ abstract class IPhotoService {
   
   // Photo Operations (delegated or direct)
   Future<String> createPhoto(PhotoModel photo);
-  Future<void> updateAlbumPhotoCount(String albumId);
-  Future<void> movePhotoToAlbum(String photoId, String newAlbumId);
+  Future<void> updateAlbumPhotoCount(String albumId, String userId);
+  Future<void> movePhotoToAlbum(String photoId, String newAlbumId, {String? newCategory});
   Future<void> togglePhotoFavorite(String photoId);
-  Future<void> deletePhoto(String photoId);
+  Future<void> deletePhoto(String photoId, String userId);
   Future<List<PhotoModel>> searchPhotos(String userId, String query);
   
   // Helpers

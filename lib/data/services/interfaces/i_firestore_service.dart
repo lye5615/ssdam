@@ -14,15 +14,15 @@ abstract class IFirestoreService {
   // Album CRUD
   Future<String> createAlbum(AlbumModel album);
   Future<void> updateAlbum(AlbumModel album);
-  Future<void> deleteAlbum(String albumId);
+  Future<void> deleteAlbum(String albumId, String userId);
   Future<List<AlbumModel>> getUserAlbums(String userId);
   Stream<List<AlbumModel>> getUserAlbumsStream(String userId);
-  Future<void> updateAlbumPhotoCount(String albumId);
+  Future<void> updateAlbumPhotoCount(String albumId, String userId);
   
   // Photo CRUD
   Future<String> createPhoto(PhotoModel photo);
   Future<void> updatePhoto(PhotoModel photo);
-  Future<void> deletePhoto(String photoId);
+  Future<void> deletePhoto(String photoId, String userId);
   Future<List<PhotoModel>> getUserPhotos(String userId, {int? limit});
   Future<List<PhotoModel>> getAlbumPhotos(String albumId, String userId);
   Stream<List<PhotoModel>> getAlbumPhotosStream(String albumId, String userId);

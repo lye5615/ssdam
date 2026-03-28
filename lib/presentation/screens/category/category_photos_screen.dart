@@ -145,14 +145,18 @@ class _CategoryPhotosScreenState extends State<CategoryPhotosScreen> {
                 photos: categoryPhotos,
                 isSelectionMode: _isSelectionMode,
                 selectedPhotoIds: _selectedPhotoIds,
-                onPhotoTap: (photo) {
+                onPhotoTap: (photos, index) {
+                  final photo = photos[index];
                   if (_isSelectionMode) {
                     _togglePhotoSelection(photo.id);
                   } else {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => PhotoDetailScreen(photo: photo),
+                        builder: (_) => PhotoDetailScreen(
+                          allPhotos: photos,
+                          initialIndex: index,
+                        ),
                       ),
                     );
                   }

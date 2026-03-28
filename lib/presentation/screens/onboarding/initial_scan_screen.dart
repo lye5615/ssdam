@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/photo_provider.dart';
 import '../../../core/constants/app_colors.dart';
-import 'classification_summary_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../home/home_screen.dart';
 
 class InitialScanScreen extends StatefulWidget {
   const InitialScanScreen({super.key});
@@ -30,11 +31,15 @@ class _InitialScanScreenState extends State<InitialScanScreen> {
     await photoProvider.loadUserPhotos(userId);
 
     if (mounted) {
+      // Mark initial scan as completed
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_completed_initial_scan', true);
+
       setState(() => _isScanning = false);
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const ClassificationSummaryScreen(),
+      
+      // Navigate to HomeScreen instead of showing popup
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }

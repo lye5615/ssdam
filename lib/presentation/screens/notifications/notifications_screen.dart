@@ -8,6 +8,7 @@ import '../../../data/models/reminder_model.dart';
 import '../../../data/models/photo_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/photo_provider.dart';
+import '../../../data/services/notification_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -146,10 +147,6 @@ class _ReminderTile extends StatelessWidget {
       );
       
       final assetId = photo?.assetEntityId;
-      
-      final asset = (assetId != null && assetId.isNotEmpty) 
-          ? photoProvider.findAssetById(assetId) 
-          : null;
 
       return Dismissible(
         key: Key('reminder_${reminder.id}'),
@@ -162,6 +159,7 @@ class _ReminderTile extends StatelessWidget {
         ),
         onDismissed: (direction) async {
            await ServiceLocator.firestoreService.deleteReminder(reminder.id);
+           await NotificationService().cancelNotification(reminder.id.hashCode);
            if (context.mounted) {
              ScaffoldMessenger.of(context).showSnackBar(
                const SnackBar(content: Text('알림이 삭제되었습니다')),
@@ -176,12 +174,21 @@ class _ReminderTile extends StatelessWidget {
             child: SizedBox(
               width: 50,
               height: 50,
-              child: asset != null 
-                ? FutureBuilder<Uint8List?>(
-                    future: asset.thumbnailData,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return Image.memory(snapshot.data!, fit: BoxFit.cover);
+              child: (assetId != null && assetId.isNotEmpty)
+                ? FutureBuilder(
+                    future: photoProvider.findAssetById(assetId),
+                    builder: (context, assetSnapshot) {
+                      if (assetSnapshot.connectionState == ConnectionState.done && 
+                          assetSnapshot.data != null) {
+                        return FutureBuilder<Uint8List?>(
+                          future: assetSnapshot.data!.thumbnailData,
+                          builder: (context, thumbSnapshot) {
+                            if (thumbSnapshot.hasData && thumbSnapshot.data != null) {
+                              return Image.memory(thumbSnapshot.data!, fit: BoxFit.cover);
+                            }
+                            return Container(color: AppColors.surfaceVariant);
+                          },
+                        );
                       }
                       return Container(color: AppColors.surfaceVariant);
                     },
@@ -362,6 +369,15 @@ class _ReminderTile extends StatelessWidget {
                       );
                       
                       await ServiceLocator.firestoreService.updateReminder(updatedReminder);
+                      
+                      // 알림 재예약
+                      await NotificationService().scheduleNotification(
+                        id: reminder.id.hashCode,
+                        title: '김치찜 알림',
+                        body: updatedReminder.description ?? '스크린샷 관련 알림입니다.',
+                        scheduledDate: selectedDate,
+                        payload: reminder.photoId,
+                      );
                       
                       if (context.mounted) {
                         Navigator.pop(context);

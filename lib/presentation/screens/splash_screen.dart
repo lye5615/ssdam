@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../providers/auth_provider.dart';
@@ -62,17 +63,24 @@ class _SplashScreenState extends State<SplashScreen>
     
     // Firebase Auth 상태 확인
     if (authProvider.isAuthenticated) {
-      _navigateToHome();
+      // Check onboarding status
+      final prefs = await SharedPreferences.getInstance();
+      final isScanCompleted = prefs.getBool('has_completed_initial_scan') ?? false;
+      
+      _navigateToHome(isScanCompleted: isScanCompleted);
     } else {
       _navigateToLogin();
     }
   }
 
-  void _navigateToHome() {
+  void _navigateToHome({required bool isScanCompleted}) {
+    final Widget targetScreen = isScanCompleted 
+        ? const HomeScreen() 
+        : const InitialScanScreen();
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const InitialScanScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) => targetScreen,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },

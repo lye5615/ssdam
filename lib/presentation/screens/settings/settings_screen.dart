@@ -181,6 +181,26 @@ class SettingsScreen extends StatelessWidget {
                         // TODO: Open terms of service
                       },
                     ),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.shield, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '고객님의 소중한 원본 사진 파일은 어떠한 경우에도 서버로 전송/저장되지 않습니다. (오직 추출된 텍스트와 분류 카테고리만 동기화됩니다)',
+                              style: TextStyle(
+                                fontSize: 12, 
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/user_model.dart';
 import '../../data/services/interfaces/i_auth_service.dart';
 import '../../core/di/service_locator.dart';
+import '../../data/services/notification_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   IAuthService get _authService => ServiceLocator.authService;
@@ -17,6 +18,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
 
   AuthProvider() {
+    _currentUser = _authService.currentUser;
     _init();
   }
 
@@ -26,11 +28,31 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = user;
       if (user != null) {
         _loadUserData();
+        _updateFcmToken();
       } else {
         _currentUser = null;
       }
       notifyListeners();
     });
+  }
+
+  Future<void> _updateFcmToken() async {
+    try {
+      if (_currentUser == null) return;
+      
+      final notificationService = NotificationService();
+      final token = await notificationService.getToken();
+      
+      if (token != null && token != _currentUser!.fcmToken) {
+        final updatedUser = _currentUser!.copyWith(fcmToken: token);
+        await ServiceLocator.firestoreService.createOrUpdateUser(updatedUser);
+        _currentUser = updatedUser;
+        notifyListeners();
+        print('✅ FCM 토큰 업데이트 성공: $token');
+      }
+    } catch (e) {
+      print('⚠️ FCM 토큰 업데이트 실패: $e');
+    }
   }
 
   // 사용자 데이터 로드

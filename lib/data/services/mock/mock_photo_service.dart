@@ -182,7 +182,7 @@ class MockPhotoService implements IPhotoService {
 
         // Save to Mock Firestore
         await ServiceLocator.firestoreService.createPhoto(photoModel);
-        await ServiceLocator.firestoreService.updateAlbumPhotoCount(photoModel.albumId);
+        await ServiceLocator.firestoreService.updateAlbumPhotoCount(photoModel.albumId, photoModel.userId);
         
         processedPhotos.add(photoModel);
         print('✅ [Mock] 가짜 처리 완료: ${photoModel.fileName} -> ${ocrResult.category}');
@@ -240,12 +240,12 @@ class MockPhotoService implements IPhotoService {
   }
 
   @override
-  Future<void> updateAlbumPhotoCount(String albumId) async {
-    await ServiceLocator.firestoreService.updateAlbumPhotoCount(albumId);
+  Future<void> updateAlbumPhotoCount(String albumId, String userId) async {
+    await ServiceLocator.firestoreService.updateAlbumPhotoCount(albumId, userId);
   }
 
   @override
-  Future<void> movePhotoToAlbum(String photoId, String newAlbumId) async {
+  Future<void> movePhotoToAlbum(String photoId, String newAlbumId, {String? newCategory}) async {
      // Implement if needed for full mock interaction
   }
 
@@ -255,8 +255,8 @@ class MockPhotoService implements IPhotoService {
   }
 
   @override
-  Future<void> deletePhoto(String photoId) async {
-    await ServiceLocator.firestoreService.deletePhoto(photoId);
+  Future<void> deletePhoto(String photoId, String userId) async {
+    await ServiceLocator.firestoreService.deletePhoto(photoId, userId);
   }
 
   @override

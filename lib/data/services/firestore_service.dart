@@ -92,7 +92,7 @@ class FirebaseFirestoreService implements IFirestoreService {
   }
 
   @override
-  Future<void> deleteAlbum(String albumId) async {
+  Future<void> deleteAlbum(String albumId, String userId) async {
     final batch = _firestore.batch();
     
     // Delete album
@@ -102,6 +102,7 @@ class FirebaseFirestoreService implements IFirestoreService {
     final photos = await _firestore
         .collection(AppConstants.photosCollection)
         .where('albumId', isEqualTo: albumId)
+        .where('userId', isEqualTo: userId)
         .get();
     
     for (final photo in photos.docs) {
@@ -175,7 +176,7 @@ class FirebaseFirestoreService implements IFirestoreService {
   }
 
   @override
-  Future<void> deletePhoto(String photoId) async {
+  Future<void> deletePhoto(String photoId, String userId) async {
     final batch = _firestore.batch();
     
     // Delete photo
@@ -185,6 +186,7 @@ class FirebaseFirestoreService implements IFirestoreService {
     final reminders = await _firestore
         .collection(AppConstants.remindersCollection)
         .where('photoId', isEqualTo: photoId)
+        .where('userId', isEqualTo: userId)
         .get();
     
     for (final reminder in reminders.docs) {
@@ -361,10 +363,11 @@ class FirebaseFirestoreService implements IFirestoreService {
 
   // Album Photo Count Update
   @override
-  Future<void> updateAlbumPhotoCount(String albumId) async {
+  Future<void> updateAlbumPhotoCount(String albumId, String userId) async {
     final photoCount = await _firestore
         .collection(AppConstants.photosCollection)
         .where('albumId', isEqualTo: albumId)
+        .where('userId', isEqualTo: userId)
         .count()
         .get();
     

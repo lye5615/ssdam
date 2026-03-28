@@ -200,11 +200,10 @@ class MockFirestoreService implements IFirestoreService {
   }
 
   @override
-  Future<void> deleteAlbum(String albumId) async {
+  Future<void> deleteAlbum(String albumId, String userId) async {
     if (_albums.containsKey(albumId)) {
-      final userId = _albums[albumId]!.userId;
       _albums.remove(albumId);
-      _photos.removeWhere((key, value) => value.albumId == albumId);
+      _photos.removeWhere((key, value) => value.albumId == albumId && value.userId == userId);
       _notifyAlbumStream(userId);
     }
   }
@@ -226,12 +225,12 @@ class MockFirestoreService implements IFirestoreService {
   }
 
   @override
-  Future<void> updateAlbumPhotoCount(String albumId) async {
+  Future<void> updateAlbumPhotoCount(String albumId, String userId) async {
     if (_albums.containsKey(albumId)) {
-      final count = _photos.values.where((p) => p.albumId == albumId).length;
+      final count = _photos.values.where((p) => p.albumId == albumId && p.userId == userId).length;
       final album = _albums[albumId]!;
       _albums[albumId] = album.copyWith(photoCount: count);
-      _notifyAlbumStream(album.userId);
+      _notifyAlbumStream(userId);
     }
   }
 
@@ -252,8 +251,9 @@ class MockFirestoreService implements IFirestoreService {
   }
 
   @override
-  Future<void> deletePhoto(String photoId) async {
-    _photos.remove(photoId);
+  Future<void> deletePhoto(String photoId, String userId) async {
+    _photos.removeWhere((key, value) => key == photoId && value.userId == userId);
+    _reminders.removeWhere((key, value) => value.photoId == photoId && value.userId == userId);
   }
 
   @override

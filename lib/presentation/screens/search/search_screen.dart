@@ -169,11 +169,14 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return PhotoGrid(
       photos: _searchResults,
-      onPhotoTap: (photo) {
+      onPhotoTap: (photos, index) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PhotoDetailScreen(photo: photo),
+            builder: (_) => PhotoDetailScreen(
+              allPhotos: photos,
+              initialIndex: index,
+            ),
           ),
         );
       },

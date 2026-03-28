@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../data/models/photo_model.dart';
@@ -9,8 +11,8 @@ import '../providers/photo_provider.dart';
 
 class PhotoGrid extends StatelessWidget {
   final List<PhotoModel> photos;
-  final Function(PhotoModel)? onPhotoTap;
-  final Function(PhotoModel)? onPhotoLongPress;
+  final void Function(List<PhotoModel> photos, int index)? onPhotoTap;
+  final void Function(PhotoModel)? onPhotoLongPress;
 
   const PhotoGrid({
     super.key,
@@ -63,7 +65,7 @@ class PhotoGrid extends StatelessWidget {
         final photo = photos[index];
         return _PhotoTile(
           photo: photo,
-          onTap: () => onPhotoTap?.call(photo),
+          onTap: () => onPhotoTap?.call(photos, index),
           onLongPress: () => onPhotoLongPress?.call(photo),
           isSelected: selectedPhotoIds.contains(photo.id),
           isSelectionMode: isSelectionMode,
@@ -193,14 +195,49 @@ class _PhotoTile extends StatelessWidget {
         },
       );
     } else {
-      // 모바일에서는 로컬 파일 사용
-      return Image.file(
-        File(photo.localPath),
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _placeholder();
-        },
-      );
+      // 모바일: assetEntityId가 있으면 갤러리에서 로드, 없으면 localPath 사용
+      if (photo.assetEntityId != null && photo.assetEntityId!.isNotEmpty) {
+        return Consumer<PhotoProvider>(
+          builder: (context, photoProvider, child) {
+            return FutureBuilder<AssetEntity?>(
+              future: photoProvider.findAssetById(photo.assetEntityId!),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  final asset = snapshot.data;
+                  if (asset != null) {
+                    return FutureBuilder<Uint8List?>(
+                      future: asset.thumbnailDataWithSize(
+                        const ThumbnailSize(400, 400),
+                      ),
+                      builder: (context, thumbSnapshot) {
+                        if (thumbSnapshot.connectionState == ConnectionState.done && 
+                            thumbSnapshot.data != null) {
+                          return Image.memory(
+                            thumbSnapshot.data!,
+                            fit: BoxFit.cover,
+                          );
+                        }
+                        return _placeholder();
+                      },
+                    );
+                  }
+                }
+                // 로딩 중이거나 asset을 찾지 못한 경우
+                return _placeholder();
+              },
+            );
+          },
+        );
+      } else {
+        // assetEntityId가 없는 경우 localPath 사용 (fallback)
+        return Image.file(
+          File(photo.localPath),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _placeholder();
+          },
+        );
+      }
     }
   }
 

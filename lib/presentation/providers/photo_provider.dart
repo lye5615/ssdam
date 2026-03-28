@@ -199,7 +199,7 @@ class PhotoProvider extends ChangeNotifier {
           print('✅ 사진 저장 완료: $photoId → ${ocrResult.category} 폴더');
           
           // 앨범 사진 개수 업데이트
-          await _photoService.updateAlbumPhotoCount(savedPhoto.albumId);
+          await _photoService.updateAlbumPhotoCount(savedPhoto.albumId, userId);
           
         } catch (e) {
           print('❌ 이미지 처리 오류: $e');
@@ -331,7 +331,9 @@ class PhotoProvider extends ChangeNotifier {
     try {
       _clearError();
       
-      await _photoService.movePhotoToAlbum(photoId, newAlbumId);
+      print('📦 사진 이동 시작: photoId=$photoId, newAlbumId=$newAlbumId, newCategory=$newCategoryName');
+      await _photoService.movePhotoToAlbum(photoId, newAlbumId, newCategory: newCategoryName);
+      print('✅ PhotoService.movePhotoToAlbum 완료');
       
       // 로컬 목록에서 해당 사진 업데이트
       _updatePhotoInLists(photoId, (photo) {
@@ -339,12 +341,15 @@ class PhotoProvider extends ChangeNotifier {
         if (newCategoryName != null) {
           updated = updated.copyWith(category: newCategoryName);
         }
+        print('📝 로컬 목록 업데이트: ${photo.category} → ${updated.category}');
         return updated;
       });
       
+      print('✅ 사진 이동 성공');
       return true;
     } catch (e) {
       _errorMessage = '사진 이동 실패: $e';
+      print('❌ 사진 이동 실패: $e');
       return false;
     }
   }
@@ -366,12 +371,17 @@ class PhotoProvider extends ChangeNotifier {
     }
   }
 
-  // 사진 삭제
   Future<bool> deletePhoto(String photoId) async {
     try {
       _clearError();
       
-      await _photoService.deletePhoto(photoId);
+      final photoToDelete = _photos.firstWhere((p) => p.id == photoId, orElse: () => PhotoModel.empty());
+      if (photoToDelete.id.isEmpty) {
+        _errorMessage = '삭제할 사진을 찾을 수 없습니다.';
+        return false;
+      }
+      
+      await _photoService.deletePhoto(photoId, photoToDelete.userId);
       
       // 로컬 목록에서 제거
       _photos.removeWhere((photo) => photo.id == photoId);
@@ -623,7 +633,7 @@ class PhotoProvider extends ChangeNotifier {
   }
 
   // ID로 AssetEntity 찾기
-  AssetEntity? findAssetById(String id) {
+  Future<AssetEntity?> findAssetById(String id) async {
     if (id.isEmpty) return null;
     try {
       return _latestScreenshots.firstWhere((asset) => asset.id == id);

@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:photo_manager/photo_manager.dart';
 import '../../core/constants/app_colors.dart';
 import '../../data/models/photo_model.dart';
 import '../../data/models/reminder_model.dart';
@@ -10,11 +12,17 @@ import '../providers/photo_provider.dart';
 import '../../core/di/service_locator.dart';
 import '../providers/album_provider.dart';
 import '../../data/models/album_model.dart';
+import '../../data/services/notification_service.dart';
 
 class PhotoDetailScreen extends StatefulWidget {
-  final PhotoModel photo;
+  final List<PhotoModel> allPhotos;
+  final int initialIndex;
 
-  const PhotoDetailScreen({super.key, required this.photo});
+  const PhotoDetailScreen({
+    super.key, 
+    required this.allPhotos, 
+    required this.initialIndex,
+  });
 
   @override
   State<PhotoDetailScreen> createState() => _PhotoDetailScreenState();
@@ -22,12 +30,14 @@ class PhotoDetailScreen extends StatefulWidget {
 
 class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
   bool _showControls = true;
-  late PhotoModel _currentPhoto; // To track updates (e.g. favorite status)
+  late PhotoModel _currentPhoto;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
-    _currentPhoto = widget.photo;
+    _currentPhoto = widget.allPhotos[widget.initialIndex];
+    _pageController = PageController(initialPage: widget.initialIndex);
   }
 
   void _toggleControls() {
@@ -42,24 +52,30 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Fullscreen Image
+          // PageView for navigation
           GestureDetector(
             onTap: _toggleControls,
-            child: Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: Hero(
-                  tag: 'photo_${_currentPhoto.id}', // Ensure tag matches previous screen
-                  child: Image.file(
-                    File(_currentPhoto.localPath),
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                       return const Icon(Icons.broken_image, color: Colors.white, size: 64);
-                    },
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: widget.allPhotos.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPhoto = widget.allPhotos[index];
+                });
+              },
+              itemBuilder: (context, index) {
+                final photo = widget.allPhotos[index];
+                return Center(
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Hero(
+                      tag: 'photo_${photo.id}',
+                      child: _buildPhotoItem(photo),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
 
@@ -372,7 +388,16 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                         type: ReminderType.general,
                       );
                       
-                      await ServiceLocator.firestoreService.createReminder(reminder);
+                      final reminderId = await ServiceLocator.firestoreService.createReminder(reminder);
+                      
+                      // 실제 기기 알림 예약
+                      await NotificationService().scheduleNotification(
+                        id: reminderId.hashCode,
+                        title: '김치찜 알림',
+                        body: reminder.description ?? '스크린샷 관련 알림입니다.',
+                        scheduledDate: selectedDate,
+                        payload: _currentPhoto.id,
+                      );
                       
                       if (context.mounted) {
                         Navigator.pop(context);
@@ -415,8 +440,8 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Consumer<AlbumProvider>(
-        builder: (context, albumProvider, child) {
+      builder: (context) => Consumer2<AlbumProvider, PhotoProvider>(
+        builder: (context, albumProvider, photoProvider, child) {
           // Filter out current category
           final albums = albumProvider.albums.where((a) => a.name != _currentPhoto.category).toList();
           
@@ -438,10 +463,15 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                     itemCount: albums.length,
                     itemBuilder: (context, index) {
                       final album = albums[index];
+                      // Calculate real-time photo count
+                      final photoCount = photoProvider.photos
+                          .where((photo) => photo.category == album.name)
+                          .length;
+                      
                       return ListTile(
                         leading: _buildAlbumIcon(album),
                         title: Text(album.name),
-                        subtitle: Text('${album.photoCount}장'),
+                        subtitle: Text('$photoCount장'),
                         onTap: () => _movePhoto(context, album),
                       );
                     },
@@ -488,10 +518,59 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
             SnackBar(content: Text('사진을 "${targetAlbum.name}"(으)로 이동했습니다.')),
           );
       } else {
+           final errorMsg = photoProvider.errorMessage ?? '이동 실패';
            ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('이동 실패')),
-          );
+             SnackBar(content: Text(errorMsg)),
+           );
       }
     }
+  }
+  Widget _buildPhotoItem(PhotoModel photo) {
+    return Consumer<PhotoProvider>(
+      builder: (context, photoProvider, child) {
+        if (photo.assetEntityId != null && photo.assetEntityId!.isNotEmpty) {
+          return FutureBuilder<AssetEntity?>(
+            future: photoProvider.findAssetById(photo.assetEntityId!),
+            builder: (context, assetSnapshot) {
+              if (assetSnapshot.connectionState == ConnectionState.done &&
+                  assetSnapshot.data != null) {
+                return FutureBuilder<Uint8List?>(
+                  future: assetSnapshot.data!.originBytes,
+                  builder: (context, imageSnapshot) {
+                    if (imageSnapshot.connectionState == ConnectionState.done &&
+                        imageSnapshot.data != null) {
+                      return Image.memory(
+                        imageSnapshot.data!,
+                        fit: BoxFit.contain,
+                      );
+                    }
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  },
+                );
+              }
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              );
+            },
+          );
+        } else {
+          return Image.file(
+            File(photo.localPath),
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(Icons.broken_image, color: Colors.white, size: 64);
+            },
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 }

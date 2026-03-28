@@ -324,49 +324,11 @@ class FirebasePhotoService implements IPhotoService {
         
         processedPhotos.add(savedPhoto);
         
-        await _firestoreService.updateAlbumPhotoCount(savedPhoto.albumId);
+        await _firestoreService.updateAlbumPhotoCount(savedPhoto.albumId, savedPhoto.userId);
         
         print('📁 저장 위치: $movedFilePath');
 
-        try {
-          final deadlineResult = await _geminiService.extractDeadlineInfoFromFile(file);
-          if (deadlineResult['has_deadline'] == true &&
-              deadlineResult['notifications'] is List) {
-            final List notifications = deadlineResult['notifications'];
-            print('🔔 기한 알림 생성 시작: ${notifications.length}개');
-            for (final n in notifications) {
-              try {
-                final reminderDate = DateTime.parse(n as String);
-                final reminder = ReminderModel(
-                  id: '',
-                  photoId: savedPhoto.id,
-                  userId: userId,
-                  title: '기한 알림: ${deadlineResult['deadline']}',
-                  description: '스크린샷 기반 자동 생성 알림',
-                  reminderDate: reminderDate,
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now(),
-                  isCompleted: false,
-                  isNotified: false,
-                  type: ReminderType.deadline,
-                  metadata: {
-                    'photoFileName': savedPhoto.fileName,
-                    'album': deadlineResult['album'],
-                    'deadline': deadlineResult['deadline'],
-                  },
-                );
-                final reminderId = await _firestoreService.createReminder(reminder);
-                print('🔔 알림 생성 완료: $reminderId @ ${reminder.reminderDate.toIso8601String()}');
-              } catch (e) {
-                print('⚠️ 알림 생성 실패: $e');
-              }
-            }
-          } else {
-            print('ℹ️ 기한 정보 없음 또는 알림 0개');
-          }
-        } catch (e) {
-          print('❌ 기한 정보 처리 실패: $e');
-        }
+
         
       } catch (e) {
         print('Error processing screenshot: $e');
@@ -436,26 +398,43 @@ class FirebasePhotoService implements IPhotoService {
   }
 
   @override
-  Future<void> movePhotoToAlbum(String photoId, String newAlbumId) async {
+  Future<void> movePhotoToAlbum(String photoId, String newAlbumId, {String? newCategory}) async {
+    print('📦 PhotoService.movePhotoToAlbum 시작: photoId=$photoId, albumId=$newAlbumId, category=$newCategory');
+    
     final photoDoc = await _firestoreService.firestore
         .collection(AppConstants.photosCollection)
         .doc(photoId)
         .get();
     
-    if (!photoDoc.exists) return;
+    if (!photoDoc.exists) {
+      print('❌ 사진을 찾을 수 없습니다: $photoId');
+      return;
+    }
     
     final photo = PhotoModel.fromJson({...photoDoc.data()!, 'id': photoId});
     final oldAlbumId = photo.albumId;
+    print('📄 기존 사진 정보: category=${photo.category}, albumId=${photo.albumId}');
     
-    final updatedPhoto = photo.copyWith(
+    var updatedPhoto = photo.copyWith(
       albumId: newAlbumId,
       updatedAt: DateTime.now(),
     );
     
-    await _firestoreService.updatePhoto(updatedPhoto);
+    // Update category if provided
+    if (newCategory != null) {
+      updatedPhoto = updatedPhoto.copyWith(category: newCategory);
+      print('📝 카테고리 업데이트: ${photo.category} → $newCategory');
+    }
     
-    await _firestoreService.updateAlbumPhotoCount(oldAlbumId);
-    await _firestoreService.updateAlbumPhotoCount(newAlbumId);
+    print('💾 Firestore 업데이트 시작...');
+    await _firestoreService.updatePhoto(updatedPhoto);
+    print('✅ Firestore 업데이트 완료');
+    
+    // Temporarily disabled due to Firestore Rules permission issues
+    // TODO: Fix Firestore Rules to allow photoCount updates
+    print('⚠️ 앨범 사진 개수 업데이트 건너뛰기 (권한 문제로 임시 비활성화)');
+    // await _firestoreService.updateAlbumPhotoCount(oldAlbumId);
+    // await _firestoreService.updateAlbumPhotoCount(newAlbumId);
   }
 
   @override
@@ -477,18 +456,28 @@ class FirebasePhotoService implements IPhotoService {
   }
 
   @override
-  Future<void> deletePhoto(String photoId) async {
-    final photoDoc = await _firestoreService.firestore
-        .collection(AppConstants.photosCollection)
-        .doc(photoId)
-        .get();
-    
-    if (!photoDoc.exists) return;
-    
-    final photo = PhotoModel.fromJson({...photoDoc.data()!, 'id': photoId});
-    await _firestoreService.deletePhoto(photoId);
-    
-    await _firestoreService.updateAlbumPhotoCount(photo.albumId);
+  Future<void> deletePhoto(String photoId, String userId) async {
+    try {
+      final photoDoc = await _firestoreService.firestore
+          .collection(AppConstants.photosCollection)
+          .doc(photoId)
+          .get();
+      
+      if (!photoDoc.exists) return;
+      
+      final photo = PhotoModel.fromJson({...photoDoc.data()!, 'id': photoId});
+      await _firestoreService.deletePhoto(photoId, userId);
+      
+      try {
+        await _firestoreService.updateAlbumPhotoCount(photo.albumId, userId);
+      } catch (e) {
+        print('⚠️ 앨범 사진 개수 업데이트 실패 (권한 문제로 무시됨): $e');
+      }
+    } catch (e) {
+      print('❌ 사진 삭제 중 오류 발생: $e');
+      // 문서가 없거나 권한 등으로 조회가 안 되더라도 일단 삭제 명령은 시도
+      await _firestoreService.deletePhoto(photoId, userId).catchError((e) => print('❌ 삭제 명령 실패: $e'));
+    }
   }
 
   @override
@@ -728,7 +717,7 @@ class FirebasePhotoService implements IPhotoService {
   }
   
   @override
-  Future<void> updateAlbumPhotoCount(String albumId) async {
-    await _firestoreService.updateAlbumPhotoCount(albumId);
+  Future<void> updateAlbumPhotoCount(String albumId, String userId) async {
+    await _firestoreService.updateAlbumPhotoCount(albumId, userId);
   }
 }

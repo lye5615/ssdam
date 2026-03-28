@@ -12,6 +12,7 @@ import 'presentation/providers/album_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'firebase_options.dart';
+import 'data/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,17 +23,11 @@ void main() async {
     print('✅ .env 파일 로드 성공');
   } catch (e) {
     print('⚠️ .env 파일 로드 실패: $e');
-    print('💡 .env 파일이 없으면 기본 설정으로 진행합니다.');
   }
 
   // API Check
   final apiKey = dotenv.env['GEMINI_API_KEY'];
-  if (apiKey != null && apiKey.isNotEmpty) {
-      print('🔑 API 키 확인: 설정됨');
-  } else {
-      print('⚠️ GEMINI_API_KEY가 비어있습니다.');
-  }
-
+  
   // Mock 모드 확인
   final useMockData = dotenv.env['USE_MOCK_DATA'] == 'true';
 
@@ -44,14 +39,12 @@ void main() async {
       print('✅ Firebase 초기화 성공');
     } catch (e) {
       print('❌ Firebase 초기화 실패: $e');
-      print('⚠️ Mock 모드로 전환을 고려해보세요 (.env에 USE_MOCK_DATA=true 설정)');
-      // Firebase 실패 시 Mock 모드로 강제 전환할지 여부는 선택사항. 
-      // 현재는 그냥 진행하여 에러를 보여주거나 ServiceLocator에서 처리.
-      // 하지만 ServiceLocator.init(useMock: false)는 Firebase 인스턴스를 사용하므로 에러 발생 가능.
     }
-  } else {
-    print('🛠️ Mock Data 모드로 실행합니다. (Firebase 초기화 건너뜀)');
   }
+
+  // Initialize Notification Service (MUST be after Firebase.initializeApp)
+  final notificationService = NotificationService();
+  await notificationService.initialize();
 
   // ServiceLocator 초기화
   ServiceLocator.init(useMock: useMockData);

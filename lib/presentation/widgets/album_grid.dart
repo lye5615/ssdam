@@ -300,13 +300,35 @@ class _PremiumAlbumCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '${album.photoCount ?? 0} photos',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  // Real-time photo count from Firestore
+                  Consumer2<PhotoProvider, AuthProvider>(
+                    builder: (context, photoProvider, authProvider, child) {
+                      final userId = authProvider.currentUser?.uid;
+                      if (userId == null) {
+                        return Text(
+                          '0 photos',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        );
+                      }
+                      
+                      // Count photos in this album from photoProvider.photos
+                      final photosInAlbum = photoProvider.photos
+                          .where((photo) => photo.category == album.name)
+                          .length;
+                      
+                      return Text(
+                        '$photosInAlbum photos',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

@@ -109,19 +109,17 @@ class AlbumProvider extends ChangeNotifier {
     }
   }
 
-  // 앨범 삭제
   Future<bool> deleteAlbum(String albumId) async {
     try {
       _clearError();
       
-      // 기본 앨범은 삭제 불가
       final album = _albums.firstWhere((a) => a.id == albumId);
       if (album.isDefault) {
         _errorMessage = '기본 앨범은 삭제할 수 없습니다.';
         return false;
       }
       
-      await _firestoreService.deleteAlbum(albumId);
+      await _firestoreService.deleteAlbum(albumId, album.userId);
       
       // 로컬 목록에서 제거
       _albums.removeWhere((album) => album.id == albumId);
